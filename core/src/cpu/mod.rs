@@ -1,7 +1,7 @@
 use crate::utils::{ByteOps, merge_bytes};
 
 #[derive(Copy, Clone)]
-pub enum Regs {
+pub enum Regs8 {
     A,
     B,
     C,
@@ -63,30 +63,30 @@ impl Cpu {
         }
     }
 
-    pub fn get_r8(&self, r: Regs) -> u8 {
+    pub fn get_r8(&self, r: Regs8) -> u8 {
         match r {
-            Regs::A => self.registers.a,
-            Regs::B => self.registers.b,
-            Regs::C => self.registers.c,
-            Regs::D => self.registers.d,
-            Regs::E => self.registers.e,
-            Regs::F => self.registers.f,
-            Regs::H => self.registers.h,
-            Regs::L => self.registers.l,
+            Regs8::A => self.registers.a,
+            Regs8::B => self.registers.b,
+            Regs8::C => self.registers.c,
+            Regs8::D => self.registers.d,
+            Regs8::E => self.registers.e,
+            Regs8::F => self.registers.f,
+            Regs8::H => self.registers.h,
+            Regs8::L => self.registers.l,
         }
     }
 
-    pub fn set_r8(&mut self, r: Regs, val: u8) {
+    pub fn set_r8(&mut self, r: Regs8, val: u8) {
         match r {
-            Regs::A => self.registers.a = val,
-            Regs::B => self.registers.b = val,
-            Regs::C => self.registers.c = val,
-            Regs::D => self.registers.d = val,
-            Regs::E => self.registers.e = val,
+            Regs8::A => self.registers.a = val,
+            Regs8::B => self.registers.b = val,
+            Regs8::C => self.registers.c = val,
+            Regs8::D => self.registers.d = val,
+            Regs8::E => self.registers.e = val,
             // Note: The bottom four bits of F shall always be 0
-            Regs::F => self.registers.f = val & 0xF0,
-            Regs::H => self.registers.h = val,
-            Regs::L => self.registers.l = val,
+            Regs8::F => self.registers.f = val & 0xF0,
+            Regs8::H => self.registers.h = val,
+            Regs8::L => self.registers.l = val,
         }
     }
 
@@ -105,20 +105,20 @@ impl Cpu {
         let low_val = val.low_byte();
         match r {
             Regs16::AF => {
-                self.set_r8(Regs::A, high_val);
-                self.set_r8(Regs::F, low_val);
+                self.set_r8(Regs8::A, high_val);
+                self.set_r8(Regs8::F, low_val);
             }
             Regs16::BC => {
-                self.set_r8(Regs::B, high_val);
-                self.set_r8(Regs::C, low_val);
+                self.set_r8(Regs8::B, high_val);
+                self.set_r8(Regs8::C, low_val);
             }
             Regs16::DE => {
-                self.set_r8(Regs::D, high_val);
-                self.set_r8(Regs::E, low_val);
+                self.set_r8(Regs8::D, high_val);
+                self.set_r8(Regs8::E, low_val);
             }
             Regs16::HL => {
-                self.set_r8(Regs::H, high_val);
-                self.set_r8(Regs::L, low_val);
+                self.set_r8(Regs8::H, high_val);
+                self.set_r8(Regs8::L, low_val);
             }
             Regs16::SP => self.registers.sp = val,
         }
@@ -150,5 +150,98 @@ impl Cpu {
                 Flags::C => self.registers.f &= 0b1110_0000,
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn get_flag_returns_true_when_flag_is_set() {
+        let mut cpu = Cpu::new();
+
+        cpu.registers.f = 0b1111_0000;
+
+        assert!(cpu.get_flag(Flags::Z));
+        assert!(cpu.get_flag(Flags::N));
+        assert!(cpu.get_flag(Flags::H));
+        assert!(cpu.get_flag(Flags::C));
+    }
+
+    #[test]
+    fn get_flag_returns_false_when_flag_is_not_set() {
+        let mut cpu = Cpu::new();
+
+        cpu.registers.f = 0b0000_0000;
+
+        assert!(!cpu.get_flag(Flags::Z));
+        assert!(!cpu.get_flag(Flags::N));
+        assert!(!cpu.get_flag(Flags::H));
+        assert!(!cpu.get_flag(Flags::C));
+    }
+
+    #[test]
+    fn set_flag_sets_each_flag_correctly() {
+        let mut cpu = Cpu::new();
+
+        cpu.set_flag(Flags::Z, true);
+        assert_eq!(cpu.registers.f, 0b1000_0000);
+
+        cpu.registers.f = 0;
+        cpu.set_flag(Flags::N, true);
+        assert_eq!(cpu.registers.f, 0b0100_0000);
+
+        cpu.registers.f = 0;
+        cpu.set_flag(Flags::H, true);
+        assert_eq!(cpu.registers.f, 0b0010_0000);
+
+        cpu.registers.f = 0;
+        cpu.set_flag(Flags::C, true);
+        assert_eq!(cpu.registers.f, 0b0001_0000);
+    }
+
+    #[test]
+    fn set_flag_clears_each_flag_correctly() {
+        let mut cpu = Cpu::new();
+
+        cpu.registers.f = 0b1111_0000;
+        cpu.set_flag(Flags::Z, false);
+        assert_eq!(cpu.registers.f, 0b0111_0000);
+
+        cpu.registers.f = 0b1111_0000;
+        cpu.set_flag(Flags::N, false);
+        assert_eq!(cpu.registers.f, 0b1011_0000);
+
+        cpu.registers.f = 0b1111_0000;
+        cpu.set_flag(Flags::H, false);
+        assert_eq!(cpu.registers.f, 0b1101_0000);
+
+        cpu.registers.f = 0b1111_0000;
+        cpu.set_flag(Flags::C, false);
+        assert_eq!(cpu.registers.f, 0b1110_0000);
+    }
+
+    #[test]
+    fn set_flag_does_not_modify_other_flags_when_setting() {
+        let mut cpu = Cpu::new();
+
+        cpu.registers.f = 0b0100_0000;
+        cpu.set_flag(Flags::Z, true);
+
+        assert_eq!(cpu.registers.f, 0b1100_0000);
+    }
+
+    #[test]
+    fn set_flag_does_not_modify_other_flags_when_clearing() {
+        let mut cpu = Cpu::new();
+
+        cpu.registers.f = 0b1111_0000;
+        cpu.set_flag(Flags::H, false);
+
+        assert!(cpu.get_flag(Flags::Z));
+        assert!(cpu.get_flag(Flags::N));
+        assert!(!cpu.get_flag(Flags::H));
+        assert!(cpu.get_flag(Flags::C));
     }
 }
