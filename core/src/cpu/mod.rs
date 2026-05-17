@@ -1,5 +1,7 @@
 use crate::utils::{ByteOps, merge_bytes};
 
+pub mod opcodes;
+
 #[derive(Copy, Clone)]
 pub enum Regs8 {
     A,
@@ -150,6 +152,27 @@ impl Cpu {
                 Flags::C => self.registers.f &= 0b1110_0000,
             }
         }
+    }
+
+    pub fn fetch(&mut self) -> u8 {
+        let val = self.read_ram(self.registers.pc);
+        self.registers.pc += 1;
+        val
+    }
+
+    pub fn fetch_u16(&mut self) -> u16 {
+        let low = self.fetch();
+        let high = self.fetch();
+        let val = merge_bytes(high, low);
+        val
+    }
+
+    pub fn read_ram(&self, addr: u16) -> u8 {
+        todo!();
+    }
+
+    pub fn write_ram(&mut self, addr: u16, val: u8) {
+        todo!();
     }
 }
 
